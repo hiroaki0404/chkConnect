@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <EditTextPreference android:key="checkInterval" android:title="@string/settingLabel_checkInterval" android:dialogTitle="Interval(sec)"></EditTextPreference>
+    <EditTextPreference android:key="screenOffCheckInterval" android:dialogTitle="Interval(sec)" android:title="@string/settingLabel_screenOffCheckInterval"></EditTextPreference>
+    <EditTextPreference android:key="checkURL" android:title="@string/settingLabel_checkURL" android:dialogTitle="URL to check connection"></EditTextPreference>
+</PreferenceScreen>

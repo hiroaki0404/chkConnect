@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">chkConnect</string>
+    <string name="settingLabel_checkInterval">Check interval(sec)</string>
+    <string name="menu_settings">Settings</string>
+    <string name="ntfy_alive">Connection alive</string>
+    <string name="ntfy_discn">Disconnected</string>
+    <string name="ntfy_nowifi"></string>
+    <string name="ntfy_conn"></string>
+    <string name="settingLabel_screenOffCheckInterval">Check interval when screen is off(sec)</string>
+    <string name="settingLabel_checkURL">Check URL</string>
+    <string name="ntfy_seterror">Setting error</string>
+    <string name="ntfy_timeout">Connection timeout</string>
+    <string name="ntfy_error">Unknown error</string>
+</resources>
