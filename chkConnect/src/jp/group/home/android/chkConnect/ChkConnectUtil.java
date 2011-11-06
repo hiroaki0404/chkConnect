@@ -7,6 +7,7 @@ package jp.group.home.android.chkConnect;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Date;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -24,6 +25,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.SystemClock;
@@ -102,17 +104,21 @@ public class ChkConnectUtil {
 		WifiManager wMgr = (WifiManager)(context.getSystemService(Context.WIFI_SERVICE));
 		WifiInfo info = wMgr.getConnectionInfo();
 		if ((info != null)&&(info.getSSID() != null)) {
-			// Wifi接続している
+			// Wifi接続している?
+			if (info.getSupplicantState() != SupplicantState.COMPLETED) {
+				setNextLaunch(context, getInterval());
+				return true;
+			}
 			// サイトに接続できるかチェックする
 			final int statusCode = tryConnect(3, chkURL); // 時間がかかる可能性がある
 			final boolean connectStatus = statusCode == HttpStatus.SC_OK;
 			
 			setNextLaunch(context, interval);
 	    	if (!connectStatus) {
-	    		notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_discn) + Integer.toString(statusCode));
+	    		notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_discn) + " " + Integer.toString(statusCode));
 	    		disconnectWifi(context);
 	    	}else{
-	    		notify(context, R.drawable.icon, context.getString(R.string.ntfy_alive) + Integer.toString(statusCode));
+	    		notify(context, R.drawable.icon, context.getString(R.string.ntfy_alive) + " " + Integer.toString(statusCode));
 		    	Log.d("chkConnect", "Connection alive");
 	    	}
 	    	return true;
@@ -154,6 +160,7 @@ public class ChkConnectUtil {
     	AlarmManager aMgr = (AlarmManager)(context.getSystemService(Context.ALARM_SERVICE));
     	long nextTime = SystemClock.elapsedRealtime() + interval * 1000;
     	Intent intent = new Intent(context, ChkConnectReceiver.class);
+    	intent.putExtra("time", (new Date()).getTime());
 //    	intent.setClass(context, getClass());
     	PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     	aMgr.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, nextTime, pendingIntent);

@@ -5,12 +5,14 @@
 package jp.group.home.android.chkConnect;
 
 import java.net.URI;
+import java.util.Date;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.PowerManager;
 import android.util.Log;
 
@@ -26,18 +28,28 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 		if (intentAction != null) {
 			Log.d("chkConnect", intentAction);
 		}
-		if ((intentAction != null)&&
-				(intentAction.equals(Intent.ACTION_USER_PRESENT)||intentAction.equals("android.net.wifi.STATE_CHANGE"))) {
-			// タイマー以外で呼ばれた場合、タイマー起動をリセット。
-            Intent cancelIntent = new Intent(context.getApplicationContext(), ChkConnectReceiver.class);
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(context.getApplicationContext(), 0, cancelIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-        	AlarmManager aMgr = (AlarmManager)(context.getSystemService(Context.ALARM_SERVICE));
-    		aMgr.cancel(pendingIntent);
-    		Log.d("chkConnect", "Reset next launch");
-    		ChkConnectUtil util = new ChkConnectUtil();
-    		if (util.setNextLaunch(context.getApplicationContext(), util.getInterval())) {
-    			return;
-    		}
+		if (intentAction != null) {
+			if (intentAction.equals(Intent.ACTION_USER_PRESENT)||intentAction.equals("android.net.wifi.STATE_CHANGE")) {
+				// タイマー以外で呼ばれた場合、タイマー起動をリセット。
+	            Intent cancelIntent = new Intent(context.getApplicationContext(), ChkConnectReceiver.class);
+	            PendingIntent pendingIntent = PendingIntent.getBroadcast(context.getApplicationContext(), 0, cancelIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+	        	AlarmManager aMgr = (AlarmManager)(context.getSystemService(Context.ALARM_SERVICE));
+	    		aMgr.cancel(pendingIntent);
+	    		Log.d("chkConnect", "Reset next launch");
+	    		ChkConnectUtil util = new ChkConnectUtil();
+	    		if (util.setNextLaunch(context.getApplicationContext(), util.getInterval())) {
+	    			return;
+	    		} else {
+	    			Bundle bundle = intent.getExtras();
+	    			if (bundle != null) {
+		    			final long prevTime = bundle.getLong("time");
+		    			final long now = (new Date()).getTime();
+		    			if (now - prevTime < util.getInterval()) {
+		    				return;
+		    			}
+	    			}
+	    		}
+			}
 		}
 		(new Thread(new Runnable() {
 			public void run() {
@@ -57,7 +69,7 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 					chkThread.start();
 					// waitする
 					try {
-						Thread.sleep(3000);
+						Thread.sleep(util.getInterval()*1000);
 					} catch (InterruptedException e) {
 						util.notify(context, R.drawable.icon, context.getString(R.string.ntfy_error));
 						chkThread.interrupt();

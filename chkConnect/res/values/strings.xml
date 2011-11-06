@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--  $Id$ -->
 <resources>
     <string name="app_name">chkConnect</string>
     <string name="settingLabel_checkInterval">Check interval(sec)</string>
