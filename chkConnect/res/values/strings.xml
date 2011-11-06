@@ -13,4 +13,6 @@
     <string name="ntfy_seterror">Setting error</string>
     <string name="ntfy_timeout">Connection timeout</string>
     <string name="ntfy_error">Unknown error</string>
+    <string name="dialog_interval">Interval(sec)</string>
+    <string name="dialog_url">URL to check connection</string>
 </resources>

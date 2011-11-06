@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--  $Id$ -->
+<resources>
+    <string name="app_name">chkConnect</string>
+    <string name="settingLabel_checkInterval">チェック間隔(秒)</string>
+    <string name="menu_settings">設定</string>
+    <string name="ntfy_alive">接続中</string>
+    <string name="ntfy_discn">切断</string>
+    <string name="ntfy_nowifi"></string>
+    <string name="ntfy_conn"></string>
+    <string name="settingLabel_screenOffCheckInterval">画面消灯時のチェック間隔(秒)</string>
+    <string name="settingLabel_checkURL">接続確認URL</string>
+    <string name="ntfy_seterror">設定エラー</string>
+    <string name="ntfy_timeout">タイムアウト</string>
+    <string name="ntfy_error">エラー</string>
+    <string name="dialog_interval">間隔(秒)</string>
+    <string name="dialog_url">確認URL</string>
+</resources>
