@@ -25,9 +25,11 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.NetworkInfo;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Bundle;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -149,7 +151,7 @@ public class ChkConnectUtil {
 	 * 次の呼び出しをセットする
 	 * @param context	コンテキスト
 	 * @param interval	次に呼び出すまでの時間
-	 * @return
+	 * @return true: セットした / false: 次の呼び出しが0だった。セットしなかった。
 	 */
 	public boolean setNextLaunch(Context context, final long interval) {
 		Log.d("chkConnect", "Set Next " + Long.toString(interval)+ "sec later");
@@ -179,10 +181,11 @@ public class ChkConnectUtil {
 //        long interval = 0L;
 //        URI chkURL = null;
         if (pref != null) {
-        	String strInterval = "", strOffInterval = "", strURL = "";
+        	String strInterval = "", strOffInterval = "", strWifiDelay = "", strURL = "";
         	try {
         		strInterval = pref.getString("checkInterval", "");
         		strOffInterval = pref.getString("screenOffCheckInterval", "");
+        		strWifiDelay = pref.getString("wifiOnDelay", "");
         		strURL = pref.getString("checkURL", "");
         	}catch(ClassCastException e){
         		// 設定されていないことにする
@@ -201,6 +204,13 @@ public class ChkConnectUtil {
         			screenOffInterval = Long.parseLong(strOffInterval);
         		}catch(NumberFormatException e){
         			screenOffInterval = 3600L;
+        		}
+        		try {
+        			wifiDelay = Long.parseLong(strWifiDelay);
+        		}catch(NumberFormatException e){
+        			if (isSettings) {
+        				wifiDelay = interval;
+        			}
         		}
         		try {
 					chkURL = new URI(strURL);
@@ -237,10 +247,45 @@ public class ChkConnectUtil {
 		this.chkURL = chkURL;
 	}
 
+	public long getWifiDelay() {
+		return wifiDelay;
+	}
+
+	public void setWifiDelay(long wifiDelay) {
+		this.wifiDelay = wifiDelay;
+	}
+
 	private long interval;
 	private long screenOffInterval;
+	private long wifiDelay;
 	private URI chkURL;
-	
+
+	/**
+	 * Wifi接続完了したか？
+	 * @param intent
+	 * @return true:接続完了 / false:完了していない、違うIntentなど
+	 */
+	public boolean isWifiConnected(Intent intent) {
+		final String intentAction = intent.getAction();
+		if (intentAction.equals("android.net.wifi.STATE_CHANGE")) {
+			// 接続中か接続完了か、判断する
+			Bundle extras = intent.getExtras();
+			if (extras != null) {
+				NetworkInfo info = extras.getParcelable(WifiManager.EXTRA_NETWORK_INFO);
+		        if ((info != null)&& info.isConnected()) {
+		        	// 繋がっている
+		    		Log.d("chkConnect", "Connected");
+		    		return true;
+		        } else {
+		    		Log.d("chkConnect", "Connecting");
+		        	return false;
+		        }
+			} else {
+				return false;
+			}
+		}
+		return false;
+	}
 	/**
 	 * 通知領域に通知する
 	 * @param context	コンテキスト

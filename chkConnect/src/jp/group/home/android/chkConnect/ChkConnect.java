@@ -45,7 +45,7 @@ public class ChkConnect extends Activity {
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
     	ChkConnectUtil util = new ChkConnectUtil();
         final boolean isSettings = (pref == null)? false:util.getSettings(getApplicationContext());
-        if (isSettings) {
+        if (false) {
         	// 画面のon/offが変化した時にキックする
 //        	IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_ON);
 //        	filter.addAction("android.net.wifi.STATE_CHANGE");

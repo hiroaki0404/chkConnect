@@ -29,27 +29,37 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 			Log.d("chkConnect", intentAction);
 		}
 		if (intentAction != null) {
-			if (intentAction.equals(Intent.ACTION_USER_PRESENT)||intentAction.equals("android.net.wifi.STATE_CHANGE")) {
+    		ChkConnectUtil util = new ChkConnectUtil();
+			if (intentAction.equals(Intent.ACTION_USER_PRESENT)||util.isWifiConnected(intent)) {
 				// タイマー以外で呼ばれた場合、タイマー起動をリセット。
 	            Intent cancelIntent = new Intent(context.getApplicationContext(), ChkConnectReceiver.class);
 	            PendingIntent pendingIntent = PendingIntent.getBroadcast(context.getApplicationContext(), 0, cancelIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 	        	AlarmManager aMgr = (AlarmManager)(context.getSystemService(Context.ALARM_SERVICE));
 	    		aMgr.cancel(pendingIntent);
 	    		Log.d("chkConnect", "Reset next launch");
-	    		ChkConnectUtil util = new ChkConnectUtil();
-	    		if (util.setNextLaunch(context.getApplicationContext(), util.getInterval())) {
+	    		if (!util.getSettings(context)) {
 	    			return;
-	    		} else {
-	    			Bundle bundle = intent.getExtras();
-	    			if (bundle != null) {
-		    			final long prevTime = bundle.getLong("time");
-		    			final long now = (new Date()).getTime();
-		    			if (now - prevTime < util.getInterval()) {
-		    				return;
-		    			}
-	    			}
 	    		}
+	    		long interval = util.getInterval();
+	    		if (intentAction.equals("android.net.wifi.STATE_CHANGE")) {
+	    			interval = util.getWifiDelay();
+	    		}
+	    		if (util.setNextLaunch(context.getApplicationContext(), interval)) {
+	    			return;
+	    		}
+    		} else {
+    			// タイマーで呼ばれた
+    			Bundle bundle = intent.getExtras();
+    			if (bundle != null) {
+	    			final long prevTime = bundle.getLong("time");
+	    			final long now = (new Date()).getTime();
+	    			if (now - prevTime < util.getInterval()) {
+	    				return;
+	    			}
+    			}
 			}
+		} else {
+			Log.d("chkConnect", "intentAction is NULL");
 		}
 		(new Thread(new Runnable() {
 			public void run() {
@@ -61,7 +71,6 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 					final URI uri = util.getChkURL();
 					final long interval = pwMgr.isScreenOn()?util.getInterval():util.getScreenOffInterval();
 					Thread chkThread = new Thread(new Runnable() {
-//						public volatile boolean foreceEnd = false;
 						public void run() {
 							util.chkConnect(context, uri, interval);
 						}
