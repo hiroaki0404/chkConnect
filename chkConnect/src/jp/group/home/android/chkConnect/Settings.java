@@ -3,6 +3,8 @@ package jp.group.home.android.chkConnect;
 
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
 
@@ -24,6 +26,12 @@ public class Settings extends PreferenceActivity {
     		final long interval = util.getInterval();
     		if (interval >= 0L) {
     			util.setNextLaunch(this, interval);
+				SharedPreferences sp;
+				sp = this.getSharedPreferences(this.getString(R.string.app_name), Context.MODE_PRIVATE);
+				Editor ed = sp.edit();
+				ed.putLong("interval", interval);
+				ed.commit();
+
     		}
     	}
     	super.onDestroy();

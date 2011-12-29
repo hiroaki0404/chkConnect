@@ -12,6 +12,7 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.util.Log;
@@ -24,19 +25,13 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 	@Override
 	public void onReceive(final Context context, Intent intent) {
 		Log.d("chkConnect", "ChkConnectReceiver::onReceive");
+		ChkConnectUtil util = new ChkConnectUtil();
+		util.cancelNext(context);
+		Log.d("chkConnect", "Reset next launch");
 		final String intentAction = intent.getAction();
 		if (intentAction != null) {
 			Log.d("chkConnect", intentAction);
-		}
-		if (intentAction != null) {
-    		ChkConnectUtil util = new ChkConnectUtil();
 			if (intentAction.equals(Intent.ACTION_USER_PRESENT)||util.isWifiConnected(intent)) {
-				// タイマー以外で呼ばれた場合、タイマー起動をリセット。
-	            Intent cancelIntent = new Intent(context.getApplicationContext(), ChkConnectReceiver.class);
-	            PendingIntent pendingIntent = PendingIntent.getBroadcast(context.getApplicationContext(), 0, cancelIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-	        	AlarmManager aMgr = (AlarmManager)(context.getSystemService(Context.ALARM_SERVICE));
-	    		aMgr.cancel(pendingIntent);
-	    		Log.d("chkConnect", "Reset next launch");
 	    		if (!util.getSettings(context)) {
 	    			return;
 	    		}
@@ -47,7 +42,7 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 	    		if (util.setNextLaunch(context.getApplicationContext(), interval)) {
 	    			return;
 	    		}
-    		} else {
+/*    		} else {
     			// タイマーで呼ばれた
     			Bundle bundle = intent.getExtras();
     			if (bundle != null) {
@@ -56,7 +51,7 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 	    			if (now - prevTime < util.getInterval()) {
 	    				return;
 	    			}
-    			}
+    			} */
 			}
 		} else {
 			Log.d("chkConnect", "intentAction is NULL");
@@ -70,15 +65,19 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 					PowerManager pwMgr = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
 					final URI uri = util.getChkURL();
 					final long interval = pwMgr.isScreenOn()?util.getInterval():util.getScreenOffInterval();
+					SharedPreferences sp;
+					sp = context.getSharedPreferences(context.getString(R.string.app_name), Context.MODE_PRIVATE);
+					final long delay = sp.getLong("interval", interval);
+
 					Thread chkThread = new Thread(new Runnable() {
 						public void run() {
-							util.chkConnect(context, uri, interval);
+							util.chkConnect(context, uri, delay);
 						}
 					});
 					chkThread.start();
 					// waitする
 					try {
-						Thread.sleep(util.getInterval()*1000);
+						Thread.sleep(delay*1000-200);
 					} catch (InterruptedException e) {
 						util.notify(context, R.drawable.icon, context.getString(R.string.ntfy_error));
 						chkThread.interrupt();

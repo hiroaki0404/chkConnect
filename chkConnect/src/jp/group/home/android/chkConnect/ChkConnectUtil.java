@@ -25,6 +25,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.net.NetworkInfo;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiInfo;
@@ -67,11 +68,13 @@ public class ChkConnectUtil {
 			}catch(IOException e){
 				final String errMsg = e.getMessage();
 				Log.d("chkConnect", (errMsg == null)?"error": errMsg);
+				statusCode = -2; // debug
 				// Do nothing. Try again.
 			}catch(Exception e){
 				// Unexpected exception. Return as fail.
 				final String errMsg = e.getMessage();
 				Log.d("chkConnect", (errMsg == null)?"error": errMsg);
+				statusCode = -3; // debug
 				break;
 			}
 		}
@@ -86,7 +89,18 @@ public class ChkConnectUtil {
 	 */
 	public boolean disconnectWifi(Context context) {
 		WifiManager mgr = (WifiManager)(context.getSystemService(Context.WIFI_SERVICE));
-		return mgr.disconnect();
+		final long now = (new Date()).getTime();
+		SharedPreferences sp;
+		sp = context.getSharedPreferences(context.getString(R.string.app_name), Context.MODE_PRIVATE);
+		final long interval = sp.getLong("interval", 0L);
+		final long disconnect = sp.getLong("disconnect", 0L);
+		if (now - disconnect > interval) {
+			Editor ed = sp.edit();
+			ed.putLong("disconnect", now);
+			ed.commit();
+			return mgr.disconnect();
+		}
+		return false;
 	}
 
 	/**
@@ -98,6 +112,7 @@ public class ChkConnectUtil {
 	 */
 	public boolean chkConnect(Context context, final URI chkURL, final long interval) {
 		if (interval <= 0L) {
+			notify(context, R.drawable.icon, "param interval error");
 			return false;
 		}
 		Log.d("chkConnect", "chkConnect");
@@ -114,8 +129,19 @@ public class ChkConnectUtil {
 			// サイトに接続できるかチェックする
 			final int statusCode = tryConnect(3, chkURL); // 時間がかかる可能性がある
 			final boolean connectStatus = statusCode == HttpStatus.SC_OK;
+			SharedPreferences sp;
+			sp = context.getSharedPreferences(context.getString(R.string.app_name), Context.MODE_PRIVATE);
 			
-			setNextLaunch(context, interval);
+			long delay = sp.getLong("interval", interval);
+			if (statusCode == HttpStatus.SC_MOVED_TEMPORARILY) {
+				delay = delay + interval/5; // 302だった場合、どんどん遅くしていく
+				if (delay > interval * 3) {
+					delay = interval;
+				}
+			} else if ((statusCode > 0)&&(statusCode < 299)) {
+				delay = interval; // XXX 遅くしていった値を戻す。-1の時、もどす？
+			}
+			setNextLaunch(context, delay);
 	    	if (!connectStatus) {
 	    		notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_discn) + " " + Integer.toString(statusCode));
 	    		disconnectWifi(context);
@@ -123,6 +149,10 @@ public class ChkConnectUtil {
 	    		notify(context, R.drawable.icon, context.getString(R.string.ntfy_alive) + " " + Integer.toString(statusCode));
 		    	Log.d("chkConnect", "Connection alive");
 	    	}
+			Editor ed = sp.edit();
+			ed.putLong("interval", delay);
+			ed.commit();
+			
 	    	return true;
 		} else {
 			// 接続していない
@@ -156,6 +186,7 @@ public class ChkConnectUtil {
 	public boolean setNextLaunch(Context context, final long interval) {
 		Log.d("chkConnect", "Set Next " + Long.toString(interval)+ "sec later");
 		if (interval <= 0L) {
+			notify(context, R.drawable.icon, context.getString(R.string.ntfy_seterror));
 			return false;
 		}
 		// 一定時間後に起動するようタイマーセット
@@ -168,7 +199,18 @@ public class ChkConnectUtil {
     	aMgr.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, nextTime, pendingIntent);
     	return true;
 	}
-	
+
+	/**
+	 * セットされている呼び出しを取り消す
+	 * @param context	コンテキスト
+	 */
+	public void cancelNext(final Context context) {
+		Intent cancelIntent = new Intent(context.getApplicationContext(), ChkConnectReceiver.class);
+		PendingIntent pendingIntent = PendingIntent.getBroadcast(context.getApplicationContext(), 0, cancelIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+		AlarmManager aMgr = (AlarmManager)(context.getSystemService(Context.ALARM_SERVICE));
+		aMgr.cancel(pendingIntent);
+	}
+
 	/**
 	 * 設定状態確認
 	 * @param context	コンテキスト
