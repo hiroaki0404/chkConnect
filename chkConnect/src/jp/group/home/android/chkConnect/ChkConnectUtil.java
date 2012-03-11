@@ -1,4 +1,4 @@
-// $Id: ChkConnectUtil.java,v 1.5 2011/10/26 12:34:11 hiroaki-mac Exp hiroaki-mac $
+// $Id$
 /**
  * 
  */
@@ -40,7 +40,7 @@ import android.util.Log;
  *
  */
 public class ChkConnectUtil {
-	 
+	 volatile boolean isForceEnd = false;
 	/**
 	 * 指定されたuriにアクセスし、正常終了するかどうかを返す
 	 * @param retry	試行回数
@@ -57,8 +57,12 @@ public class ChkConnectUtil {
 		boolean retCode = false;
 		HttpHead request = new HttpHead(uri);
 		int statusCode = -1;
+		isForceEnd = false;
 		
 		for (int i = 0; i < retry; i++) {
+			if (isForceEnd) {
+				break;
+			}
 			try {
 				statusCode = httpclient.execute(request, new ResponseHandler<Integer>() {
 					public Integer handleResponse(HttpResponse response) {
@@ -124,6 +128,7 @@ public class ChkConnectUtil {
 			// Wifi接続している?
 			if (info.getSupplicantState() != SupplicantState.COMPLETED) {
 				setNextLaunch(context, getInterval());
+	    		notify(context, R.drawable.nowifi, "Connecting Wifi");
 				return true;
 			}
 			// サイトに接続できるかチェックする
@@ -186,7 +191,7 @@ public class ChkConnectUtil {
 	public boolean setNextLaunch(Context context, final long interval) {
 		Log.d("chkConnect", "Set Next " + Long.toString(interval)+ "sec later");
 		if (interval <= 0L) {
-			notify(context, R.drawable.icon, context.getString(R.string.ntfy_seterror));
+			notify(context, R.drawable.nowifi, "interval is 0");
 			return false;
 		}
 		// 一定時間後に起動するようタイマーセット
@@ -342,5 +347,13 @@ public class ChkConnectUtil {
 		PendingIntent contentIntent = PendingIntent.getActivity(context, 0, intent, 0);
 		notification.setLatestEventInfo(context, "ChkConnect", msg, contentIntent);
 		notifyMgr.notify(R.string.app_name, notification);
+	}
+
+	public boolean isForceEnd() {
+		return isForceEnd;
+	}
+
+	public void setForceEnd(boolean isForceEnd) {
+		this.isForceEnd = isForceEnd;
 	}
 }
