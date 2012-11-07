@@ -7,8 +7,6 @@ package jp.group.home.android.chkConnect;
 import java.net.URI;
 import java.util.Date;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -16,7 +14,6 @@ import android.content.SharedPreferences;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
-import android.os.Bundle;
 import android.os.PowerManager;
 import android.util.Log;
 
@@ -25,6 +22,8 @@ import android.util.Log;
  *
  */
 public class ChkConnectReceiver extends BroadcastReceiver{
+	final long DEFAULT_INTERVAL = 10; // sec
+	
 	@Override
 	public void onReceive(final Context context, Intent intent) {
 		Log.d("chkConnect", "ChkConnectReceiver::onReceive");
@@ -49,16 +48,6 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 	    		util.setNextLaunch(context.getApplicationContext(), interval);
 	    		util.logging(context, "Next check is " + String.valueOf(interval) + "sec later.");
 	    		return;
-/*    		} else {
-    			// タイマーで呼ばれた
-    			Bundle bundle = intent.getExtras();
-    			if (bundle != null) {
-	    			final long prevTime = bundle.getLong("time");
-	    			final long now = (new Date()).getTime();
-	    			if (now - prevTime < util.getInterval()) {
-	    				return;
-	    			}
-    			} */
 			}
 		} else {
 			final String msg = (0L == lastSentTime)? "intent is null": "timer";
@@ -76,6 +65,9 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 		if ((info != null)&&(info.getSSID() != null)&&(info.getSupplicantState() == SupplicantState.COMPLETED)) {
 			// Wifi接続している場合、接続確認のthreadをキックする。イベント処理ルーチンで余計な時間をかけない。
 			util.logging(context, "Thread definition");
+			// 次回起動を暫定セット。キックしたthreadがシステムにkillされたら、次回の起動がセットされないかもしれないから。
+			util.setNextLaunch(context.getApplicationContext(), DEFAULT_INTERVAL);
+			// 確認Thread(親)
 			(new Thread(new Runnable() {
 				public void run() {
 					final ChkConnectUtil util = new ChkConnectUtil();
@@ -88,7 +80,7 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 						final long now = (new Date()).getTime();
 						if (now - lastSentTime < interval) {
 							util.logging(context, "Too short interval.");
-							return; // 次の起動timerがセットされているか確認したほうがよい。
+							return;
 						}
 						SharedPreferences sp;
 						sp = context.getSharedPreferences(context.getString(R.string.app_name), Context.MODE_PRIVATE);
@@ -110,7 +102,6 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 							util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_error));
 							util.logging(context, "Try to kill check thread.");
 							chkThread.interrupt();
-							// TODO 自動生成された catch ブロック
 							Log.d("chkConnect", e.getMessage());
 							e.printStackTrace();
 						}
@@ -133,7 +124,7 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 			util.logging(context, "Thread start");
 		} else {
 			// Wifi接続していなかったから、何もしない。
-			util.logging(context, "Wifi disconnected");
+			util.notify(context, R.drawable.nowifi, "Wifi disconnected");
 		}
 	}
 }

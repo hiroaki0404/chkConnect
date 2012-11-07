@@ -116,9 +116,10 @@ public class ChkConnectUtil {
 	 * @param context
 	 * @param chkURL	チェック時にアクセスしてみるURL
 	 * @param interval	次にチェックするまでの間隔
+	 * @param timeLimit	最大処理時間
 	 * @return
 	 */
-	public boolean chkConnect(Context context, final URI chkURL, final long interval, final long t) {
+	public boolean chkConnect(Context context, final URI chkURL, final long interval, final long timeLimit) {
 		if (interval <= 0L) {
 			notify(context, R.drawable.icon, "param interval error");
 			return false;
@@ -156,7 +157,7 @@ public class ChkConnectUtil {
 	    	if (!connectStatus) {
 	    		notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_discn) + " " + Integer.toString(statusCode));
 	    		try {
-					Thread.sleep(t);
+					Thread.sleep(timeLimit); // 待たないで切断すると、接続イベントに対する処理が溜まってしまう
 				} catch (InterruptedException e) {
 				}
 	    		disconnectWifi(context);
@@ -173,21 +174,6 @@ public class ChkConnectUtil {
 			// 接続していない
 			Log.d("chkConnect", "No wifi connection");
     		notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_nowifi));
-			// 接続したときにキックする
-/*        	BroadcastReceiver connectedReceiver = new BroadcastReceiver() {
-				
-				@Override
-				public void onReceive(Context context, Intent intent) {
-					// 接続した?
-					ConnectivityManager cMgr = (ConnectivityManager)(context.getSystemService(Context.CONNECTIVITY_SERVICE));
-					NetworkInfo netInfo = cMgr.getActiveNetworkInfo();
-					if ((netInfo.getState() == NetworkInfo.State.CONNECTED)&&(netInfo.getType() == android.net.ConnectivityManager.TYPE_WIFI)) {
-						context.unregisterReceiver(this); // XXX
-						chkConnect(context, chkURL, interval);
-					}
-				}
-			};
-			context.registerReceiver(connectedReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)); */
 			return false;
 		}
 	}
@@ -205,12 +191,12 @@ public class ChkConnectUtil {
 			logging(context, "Invalid interval value");
 			return false;
 		}
+		cancelNext(context);
 		// 一定時間後に起動するようタイマーセット
     	AlarmManager aMgr = (AlarmManager)(context.getSystemService(Context.ALARM_SERVICE));
     	long nextTime = SystemClock.elapsedRealtime() + interval * 1000;
     	Intent intent = new Intent(context, ChkConnectReceiver.class);
     	intent.putExtra("time", (new Date()).getTime());
-//    	intent.setClass(context, getClass());
     	PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     	aMgr.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, nextTime, pendingIntent);
     	return true;
@@ -236,8 +222,6 @@ public class ChkConnectUtil {
 		// 設定がされているか確認する
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
         boolean isSettings = false;
-//        long interval = 0L;
-//        URI chkURL = null;
         if (pref != null) {
         	String strInterval = "", strOffInterval = "", strWifiDelay = "", strURL = "";
         	try {
@@ -388,8 +372,10 @@ public class ChkConnectUtil {
 			output.close();
 		} catch (FileNotFoundException e) {
 			notify(context, R.drawable.nowifi, "Log file not found.");
+			Log.d("chkConnect", "Log file not found.");
 		} catch (IOException e) {
 			notify(context, R.drawable.nowifi, "Log file access error.");
+			Log.d("chkConnect", "Log file access error.");
 		}
 	}
 }
