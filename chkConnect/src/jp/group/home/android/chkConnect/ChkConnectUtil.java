@@ -1,9 +1,11 @@
-// $Id$
+// $Id: ChkConnectUtil.java,v 1.5 2011/10/26 12:34:11 hiroaki-mac Exp hiroaki-mac $
 /**
  * 
  */
 package jp.group.home.android.chkConnect;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -33,6 +35,7 @@ import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
+import android.text.format.Time;
 import android.util.Log;
 
 /**
@@ -40,6 +43,7 @@ import android.util.Log;
  *
  */
 public class ChkConnectUtil {
+	static final String FILENAME = "connect.log";
 	 volatile boolean isForceEnd = false;
 	/**
 	 * 指定されたuriにアクセスし、正常終了するかどうかを返す
@@ -54,7 +58,7 @@ public class ChkConnectUtil {
 		HttpConnectionParams.setSoTimeout(httpParams, 2000); /* OnReceive()でのsleep()より短くする */
 		HttpClientParams.setRedirecting(httpParams, false);
 		
-		boolean retCode = false;
+//		boolean retCode = false;
 		HttpHead request = new HttpHead(uri);
 		int statusCode = -1;
 		isForceEnd = false;
@@ -114,7 +118,7 @@ public class ChkConnectUtil {
 	 * @param interval	次にチェックするまでの間隔
 	 * @return
 	 */
-	public boolean chkConnect(Context context, final URI chkURL, final long interval) {
+	public boolean chkConnect(Context context, final URI chkURL, final long interval, final long t) {
 		if (interval <= 0L) {
 			notify(context, R.drawable.icon, "param interval error");
 			return false;
@@ -132,8 +136,10 @@ public class ChkConnectUtil {
 				return true;
 			}
 			// サイトに接続できるかチェックする
+			Log.d("chkConnect", "Start checking");
 			final int statusCode = tryConnect(3, chkURL); // 時間がかかる可能性がある
 			final boolean connectStatus = statusCode == HttpStatus.SC_OK;
+			Log.d("chkConnect", "Check result:" + Integer.valueOf(statusCode));
 			SharedPreferences sp;
 			sp = context.getSharedPreferences(context.getString(R.string.app_name), Context.MODE_PRIVATE);
 			
@@ -149,6 +155,10 @@ public class ChkConnectUtil {
 			setNextLaunch(context, delay);
 	    	if (!connectStatus) {
 	    		notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_discn) + " " + Integer.toString(statusCode));
+	    		try {
+					Thread.sleep(t);
+				} catch (InterruptedException e) {
+				}
 	    		disconnectWifi(context);
 	    	}else{
 	    		notify(context, R.drawable.icon, context.getString(R.string.ntfy_alive) + " " + Integer.toString(statusCode));
@@ -157,7 +167,7 @@ public class ChkConnectUtil {
 			Editor ed = sp.edit();
 			ed.putLong("interval", delay);
 			ed.commit();
-			
+
 	    	return true;
 		} else {
 			// 接続していない
@@ -192,6 +202,7 @@ public class ChkConnectUtil {
 		Log.d("chkConnect", "Set Next " + Long.toString(interval)+ "sec later");
 		if (interval <= 0L) {
 			notify(context, R.drawable.nowifi, "interval is 0");
+			logging(context, "Invalid interval value");
 			return false;
 		}
 		// 一定時間後に起動するようタイマーセット
@@ -219,7 +230,7 @@ public class ChkConnectUtil {
 	/**
 	 * 設定状態確認
 	 * @param context	コンテキスト
-	 * @return
+	 * @return true:設定あり false:設定なし
 	 */
 	public boolean getSettings(Context context) {
 		// 設定がされているか確認する
@@ -313,6 +324,7 @@ public class ChkConnectUtil {
 	 * @return true:接続完了 / false:完了していない、違うIntentなど
 	 */
 	public boolean isWifiConnected(Intent intent) {
+		if (intent == null) {return false;}
 		final String intentAction = intent.getAction();
 		if (intentAction.equals("android.net.wifi.STATE_CHANGE")) {
 			// 接続中か接続完了か、判断する
@@ -355,5 +367,29 @@ public class ChkConnectUtil {
 
 	public void setForceEnd(boolean isForceEnd) {
 		this.isForceEnd = isForceEnd;
+	}
+	
+	/**
+	 * debug用ログ出力(File)
+	 * @param context
+	 * @param str 出力内容
+	 */
+	public void logging(Context context, final String str) {
+		Log.d("chkConnect", str);
+		Time time = new Time("Asia/Tokyo");
+		time.setToNow();
+		final String logMsg = time.toString() + " " + str;
+		
+	    // ストリームを開く
+	    FileOutputStream output;
+		try {
+			output = context.openFileOutput(FILENAME, Context.MODE_WORLD_READABLE);
+			output.write(logMsg.getBytes());
+			output.close();
+		} catch (FileNotFoundException e) {
+			notify(context, R.drawable.nowifi, "Log file not found.");
+		} catch (IOException e) {
+			notify(context, R.drawable.nowifi, "Log file access error.");
+		}
 	}
 }

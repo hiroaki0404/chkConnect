@@ -1,4 +1,4 @@
-// $Id$
+// $Id: ChkConnectReceiver.java,v 1.4 2011/10/26 12:32:33 hiroaki-mac Exp hiroaki-mac $
 /**
  * 
  */
@@ -13,6 +13,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.wifi.SupplicantState;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.util.Log;
@@ -35,6 +38,7 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 			if (intentAction.equals(Intent.ACTION_USER_PRESENT)||util.isWifiConnected(intent)) {
 	    		if (!util.getSettings(context)) {
 					util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_conn));
+					util.logging(context, "Settings are broken");
 	    			return;
 	    		}
 	    		long interval = util.getInterval();
@@ -43,6 +47,7 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 	    			interval = util.getWifiDelay();
 	    		}
 	    		util.setNextLaunch(context.getApplicationContext(), interval);
+	    		util.logging(context, "Next check is " + String.valueOf(interval) + "sec later.");
 	    		return;
 /*    		} else {
     			// タイマーで呼ばれた
@@ -56,60 +61,79 @@ public class ChkConnectReceiver extends BroadcastReceiver{
     			} */
 			}
 		} else {
-			util.notify(context, R.drawable.nowifi, (0L == lastSentTime)? "intent is null": "timer");
-			Log.d("chkConnect", "intentAction is NULL");
+			final String msg = (0L == lastSentTime)? "intent is null": "timer";
+			util.notify(context, R.drawable.nowifi, msg);
+			Log.d("chkConnect", msg);
 		}
 		// intentの送信時間がセットされていなければ、timer起動ではないから接続チェックはしない
 		if (0L == lastSentTime) {
+			util.logging(context, "No intent");
 			return;
 		}
-		// 接続確認のthreadをキックする。イベント処理ルーチンで余計な時間をかけない。
-		(new Thread(new Runnable() {
-			public void run() {
-				final ChkConnectUtil util = new ChkConnectUtil();
-				util.notify(context, R.drawable.icon, context.getString(R.string.ntfy_conn)); // Will remove soon
-				if (util.getSettings(context)) {
-					// Screen on/offで間隔を変える
-					PowerManager pwMgr = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-					final URI uri = util.getChkURL();
-					final long interval = pwMgr.isScreenOn()?util.getInterval():util.getScreenOffInterval();
-					final long now = (new Date()).getTime();
-					if (now - lastSentTime < interval) {
-						return;
-					}
-					SharedPreferences sp;
-					sp = context.getSharedPreferences(context.getString(R.string.app_name), Context.MODE_PRIVATE);
-					final long delay = sp.getLong("interval", interval);
-
-					Thread chkThread = new Thread(new Runnable() {
-						public void run() {
-							util.chkConnect(context, uri, delay);
+		// Wifiが繋がっているか？状態が変わったらEventが投げられるので、拾っているはずだが、一応確認
+		WifiManager wMgr = (WifiManager)(context.getSystemService(Context.WIFI_SERVICE));
+		WifiInfo info = wMgr.getConnectionInfo();
+		if ((info != null)&&(info.getSSID() != null)&&(info.getSupplicantState() == SupplicantState.COMPLETED)) {
+			// Wifi接続している場合、接続確認のthreadをキックする。イベント処理ルーチンで余計な時間をかけない。
+			util.logging(context, "Thread definition");
+			(new Thread(new Runnable() {
+				public void run() {
+					final ChkConnectUtil util = new ChkConnectUtil();
+					util.notify(context, R.drawable.icon, context.getString(R.string.ntfy_conn)); // Will remove soon
+					if (util.getSettings(context)) {
+						// Screen on/offで間隔を変える
+						PowerManager pwMgr = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+						final URI uri = util.getChkURL();
+						final long interval = pwMgr.isScreenOn()?util.getInterval():util.getScreenOffInterval();
+						final long now = (new Date()).getTime();
+						if (now - lastSentTime < interval) {
+							util.logging(context, "Too short interval.");
+							return; // 次の起動timerがセットされているか確認したほうがよい。
 						}
-					});
-					chkThread.start();
-					// waitする
-					try {
-						Thread.sleep(delay*1000-200);
-					} catch (InterruptedException e) {
-						util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_error));
-						chkThread.interrupt();
-						// TODO 自動生成された catch ブロック
-						Log.d("chiConnect", e.getMessage());
-						e.printStackTrace();
+						SharedPreferences sp;
+						sp = context.getSharedPreferences(context.getString(R.string.app_name), Context.MODE_PRIVATE);
+						final long delay = sp.getLong("interval", interval);
+	
+						final long t = delay*1000-200;
+						Thread chkThread = new Thread(new Runnable() {
+							public void run() {
+								util.chkConnect(context, uri, delay, t);
+							}
+						});
+						chkThread.start();
+						// waitする
+						try {
+							util.logging(context, "Start waiting " + String.valueOf(t/1000) + " sec.");
+							Thread.sleep(t);
+							util.logging(context, "Finish waiting");
+						} catch (InterruptedException e) {
+							util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_error));
+							util.logging(context, "Try to kill check thread.");
+							chkThread.interrupt();
+							// TODO 自動生成された catch ブロック
+							Log.d("chkConnect", e.getMessage());
+							e.printStackTrace();
+						}
+						// まだthreadが生きているということは、接続できていないこと。
+						if (chkThread.isAlive()) {
+							util.setForceEnd(true);
+							chkThread.interrupt();
+							util.disconnectWifi(context);
+							util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_timeout));
+							util.setNextLaunch(context, interval);
+							util.logging(context, "Connection failed. Try " + String.valueOf(interval) + " sec later.");
+						}
+					} else {
+			        	// 設定がおかしくなったので、終了する
+						util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_seterror));
+						util.logging(context, "Thread failed to get settings.");
 					}
-					// まだthreadが生きているということは、接続できていないこと。
-					if (chkThread.isAlive()) {
-						util.setForceEnd(true);
-						chkThread.interrupt();
-						util.disconnectWifi(context);
-						util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_timeout));
-						util.setNextLaunch(context, interval);
-					}
-				} else {
-		        	// 設定がおかしくなったので、終了する
-					util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_seterror));
 				}
-			}
-		})).start();
+			})).start();
+			util.logging(context, "Thread start");
+		} else {
+			// Wifi接続していなかったから、何もしない。
+			util.logging(context, "Wifi disconnected");
+		}
 	}
 }

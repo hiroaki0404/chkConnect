@@ -27,6 +27,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -73,6 +74,7 @@ public class ChkConnect extends Activity {
         	AlarmManager aMgr = (AlarmManager)(getSystemService(Context.ALARM_SERVICE));
     		aMgr.cancel(pendingIntent);
   //  	}
+    	Log.d("chkConnect", "onDestroy");
     	super.onDestroy();
     }
     
@@ -142,5 +144,17 @@ public class ChkConnect extends Activity {
     	}
     	sendBroadcast(intent);
     } */
+    
+    @Override
+    protected void onPause() {
+    	Log.d("chkConnect", "onPause");
+    	super.onPause();
+    }
+    
+    @Override
+    protected void onStop() {
+    	Log.d("chkConnect", "onStop");
+    	super.onStop();
+    }
 
 }
