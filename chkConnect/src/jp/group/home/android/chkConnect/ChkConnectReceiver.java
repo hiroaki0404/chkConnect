@@ -36,13 +36,13 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 			Log.d("chkConnect", intentAction);
 			if (intentAction.equals(Intent.ACTION_USER_PRESENT)||util.isWifiConnected(intent)) {
 	    		if (!util.getSettings(context)) {
-					util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_conn));
+					util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_seterror));
 					util.logging(context, "Settings are broken");
 	    			return;
 	    		}
 	    		long interval = util.getInterval();
 	    		if (intentAction.equals("android.net.wifi.STATE_CHANGE")) {
-	    			util.notify(context, R.drawable.icon, "Set check timer for the Wifi on");
+//	    			util.notify(context, R.drawable.icon, "Set check timer for the Wifi on");
 	    			interval = util.getWifiDelay();
 	    		}
 	    		util.setNextLaunch(context.getApplicationContext(), interval);
@@ -51,7 +51,7 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 			}
 		} else {
 			final String msg = (0L == lastSentTime)? "intent is null": "timer";
-			util.notify(context, R.drawable.nowifi, msg);
+//			util.notify(context, R.drawable.icon, msg);
 			Log.d("chkConnect", msg);
 		}
 		// intentの送信時間がセットされていなければ、timer起動ではないから接続チェックはしない
@@ -64,14 +64,13 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 		WifiInfo info = wMgr.getConnectionInfo();
 		if ((info != null)&&(info.getSSID() != null)&&(info.getSupplicantState() == SupplicantState.COMPLETED)) {
 			// Wifi接続している場合、接続確認のthreadをキックする。イベント処理ルーチンで余計な時間をかけない。
-			util.logging(context, "Thread definition");
 			// 次回起動を暫定セット。キックしたthreadがシステムにkillされたら、次回の起動がセットされないかもしれないから。
 			util.setNextLaunch(context.getApplicationContext(), DEFAULT_INTERVAL);
+			util.notify(context, R.drawable.icon, "");
 			// 確認Thread(親)
 			(new Thread(new Runnable() {
 				public void run() {
 					final ChkConnectUtil util = new ChkConnectUtil();
-					util.notify(context, R.drawable.icon, context.getString(R.string.ntfy_conn)); // Will remove soon
 					if (util.getSettings(context)) {
 						// Screen on/offで間隔を変える
 						PowerManager pwMgr = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
@@ -104,6 +103,7 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 							chkThread.interrupt();
 							Log.d("chkConnect", e.getMessage());
 							e.printStackTrace();
+							return;
 						}
 						// まだthreadが生きているということは、接続できていないこと。
 						if (chkThread.isAlive()) {
@@ -113,6 +113,8 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 							util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_timeout));
 							util.setNextLaunch(context, interval);
 							util.logging(context, "Connection failed. Try " + String.valueOf(interval) + " sec later.");
+						} else {
+//							util.notify(context, R.drawable.okwifi, context.getString(R.string.ntfy_alive));
 						}
 					} else {
 			        	// 設定がおかしくなったので、終了する
@@ -124,7 +126,7 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 			util.logging(context, "Thread start");
 		} else {
 			// Wifi接続していなかったから、何もしない。
-			util.notify(context, R.drawable.nowifi, "Wifi disconnected");
+			util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_discn));
 		}
 	}
 }

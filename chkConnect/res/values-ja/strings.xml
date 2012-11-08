@@ -7,7 +7,7 @@
     <string name="ntfy_alive">接続中</string>
     <string name="ntfy_discn">切断</string>
     <string name="ntfy_nowifi"></string>
-    <string name="ntfy_conn"></string>
+    <string name="ntfy_conn">接続処理中</string>
     <string name="settingLabel_screenOffCheckInterval">画面消灯時のチェック間隔(秒)</string>
     <string name="settingLabel_checkURL">接続確認URL</string>
     <string name="ntfy_seterror">設定エラー</string>

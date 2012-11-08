@@ -121,7 +121,7 @@ public class ChkConnectUtil {
 	 */
 	public boolean chkConnect(Context context, final URI chkURL, final long interval, final long timeLimit) {
 		if (interval <= 0L) {
-			notify(context, R.drawable.icon, "param interval error");
+			notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_error));
 			return false;
 		}
 		Log.d("chkConnect", "chkConnect");
@@ -133,7 +133,7 @@ public class ChkConnectUtil {
 			// Wifi接続している?
 			if (info.getSupplicantState() != SupplicantState.COMPLETED) {
 				setNextLaunch(context, getInterval());
-	    		notify(context, R.drawable.nowifi, "Connecting Wifi");
+	    		notify(context, R.drawable.icon, context.getString(R.string.ntfy_conn));
 				return true;
 			}
 			// サイトに接続できるかチェックする
@@ -155,14 +155,15 @@ public class ChkConnectUtil {
 			}
 			setNextLaunch(context, delay);
 	    	if (!connectStatus) {
-	    		notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_discn) + " " + Integer.toString(statusCode));
+	    		notify(context, R.drawable.icon, context.getString(R.string.ntfy_discn) + " " + Integer.toString(statusCode));
 	    		try {
 					Thread.sleep(timeLimit); // 待たないで切断すると、接続イベントに対する処理が溜まってしまう
 				} catch (InterruptedException e) {
 				}
+	    		notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_nowifi));
 	    		disconnectWifi(context);
 	    	}else{
-	    		notify(context, R.drawable.icon, context.getString(R.string.ntfy_alive) + " " + Integer.toString(statusCode));
+	    		notify(context, R.drawable.okwifi, context.getString(R.string.ntfy_alive) + " " + Integer.toString(statusCode));
 		    	Log.d("chkConnect", "Connection alive");
 	    	}
 			Editor ed = sp.edit();
@@ -187,7 +188,7 @@ public class ChkConnectUtil {
 	public boolean setNextLaunch(Context context, final long interval) {
 		Log.d("chkConnect", "Set Next " + Long.toString(interval)+ "sec later");
 		if (interval <= 0L) {
-			notify(context, R.drawable.nowifi, "interval is 0");
+			notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_error));
 			logging(context, "Invalid interval value");
 			return false;
 		}
