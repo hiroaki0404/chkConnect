@@ -163,7 +163,8 @@ public class ChkConnectUtil {
 	    		notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_nowifi));
 	    		disconnectWifi(context);
 	    	}else{
-	    		notify(context, R.drawable.okwifi, context.getString(R.string.ntfy_alive) + " " + Integer.toString(statusCode));
+//	    		notify(context, R.drawable.okwifi, context.getString(R.string.ntfy_alive) + " " + Integer.toString(statusCode));
+	    		notify(context, R.drawable.okwifi, "");
 		    	Log.d("chkConnect", "Connection alive");
 	    	}
 			Editor ed = sp.edit();
