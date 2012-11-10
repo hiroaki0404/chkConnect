@@ -16,4 +16,5 @@
     <string name="dialog_interval">Interval(sec)</string>
     <string name="dialog_url">URL to check connection</string>
     <string name="settingLabel_wifiDelay">Delay after wifi turns on(sec)</string>
+    <string name="unit_name">sec.</string>
 </resources>

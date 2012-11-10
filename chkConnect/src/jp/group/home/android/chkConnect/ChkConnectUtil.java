@@ -43,8 +43,9 @@ import android.util.Log;
  *
  */
 public class ChkConnectUtil {
+	static final boolean DEBUG_FLG = false; // debug時はtrueにする
 	static final String FILENAME = "connect.log";
-	 volatile boolean isForceEnd = false;
+	volatile boolean isForceEnd = false;
 	/**
 	 * 指定されたuriにアクセスし、正常終了するかどうかを返す
 	 * @param retry	試行回数
@@ -362,6 +363,8 @@ public class ChkConnectUtil {
 	 */
 	public void logging(Context context, final String str) {
 		Log.d("chkConnect", str);
+		if (!DEBUG_FLG) {return;} // debug offならログ出力しない
+		
 		Time time = new Time("Asia/Tokyo");
 		time.setToNow();
 		final String logMsg = time.toString() + " " + str;

@@ -5,7 +5,11 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Bundle;
+import android.preference.EditTextPreference;
 import android.preference.PreferenceActivity;
 
 public class Settings extends PreferenceActivity {
@@ -17,6 +21,7 @@ public class Settings extends PreferenceActivity {
 		notifyMgr.cancelAll();
 
         addPreferencesFromResource(R.xml.settings);
+        setCurrentSettings();
     }
 
     @Override
@@ -37,4 +42,51 @@ public class Settings extends PreferenceActivity {
     	super.onDestroy();
     }
 
+    /**
+     * 指定された設定項目の現在値をSummaryにセットする
+     * @param preferenceName	設定項目の名称(key)
+     */
+    private void setCurrentPreference(final String preferenceName) {
+    	EditTextPreference edittext_preference = (EditTextPreference)getPreferenceScreen().findPreference(preferenceName);
+    	final String currentValue = edittext_preference.getText();
+    	if (currentValue == null) {return;}
+    	StringBuilder txt = new StringBuilder(currentValue);
+    	if (!preferenceName.equals("checkURL")) {
+    		txt.append(" ").append(this.getString(R.string.unit_name));
+    	}
+    	edittext_preference.setSummary(txt.toString());
+    }
+    
+    /**
+     * すべての設定項目の現在値をSummaryにセットする
+     */
+    private void setCurrentSettings() {
+    	for (final String preferenceName : new String[] {"checkInterval", "screenOffCheckInterval", "wifiOnDelay", "checkURL"}) {
+    		setCurrentPreference(preferenceName);
+    	}
+    }
+    
+    /**
+     * 設定項目の値を変更したとき、Summaryに反映させる
+     * @param sharedPreferences
+     * @param key
+     */
+    private SharedPreferences.OnSharedPreferenceChangeListener listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+	    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,  String key) {
+	    	setCurrentPreference(key);
+	    }
+    };
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        getPreferenceScreen().getSharedPreferences().registerOnSharedPreferenceChangeListener(listener);
+    }
+     
+    @Override
+    protected void onPause() {
+        super.onPause();
+        getPreferenceScreen().getSharedPreferences().unregisterOnSharedPreferenceChangeListener(listener);
+    }
+    
 }

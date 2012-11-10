@@ -2,8 +2,8 @@
 <!--  $Id$ -->
 <PreferenceScreen
   xmlns:android="http://schemas.android.com/apk/res/android">
-    <EditTextPreference android:key="checkInterval" android:title="@string/settingLabel_checkInterval" android:dialogTitle="@string/dialog_interval"></EditTextPreference>
-    <EditTextPreference android:key="screenOffCheckInterval" android:title="@string/settingLabel_screenOffCheckInterval" android:dialogTitle="@string/dialog_interval"></EditTextPreference>
-    <EditTextPreference android:key="wifiOnDelay" android:dialogTitle="@string/dialog_interval" android:title="@string/settingLabel_wifiDelay"></EditTextPreference><EditTextPreference android:key="checkURL" android:title="@string/settingLabel_checkURL" android:dialogTitle="@string/dialog_url"></EditTextPreference>
-    
+    <EditTextPreference android:key="checkInterval" android:title="@string/settingLabel_checkInterval" android:dialogTitle="@string/dialog_interval" android:inputType="number"></EditTextPreference>
+    <EditTextPreference android:key="screenOffCheckInterval" android:title="@string/settingLabel_screenOffCheckInterval" android:dialogTitle="@string/dialog_interval" android:inputType="number"></EditTextPreference>
+    <EditTextPreference android:key="wifiOnDelay" android:dialogTitle="@string/dialog_interval" android:title="@string/settingLabel_wifiDelay" android:inputType="number"></EditTextPreference>
+    <EditTextPreference android:key="checkURL" android:title="@string/settingLabel_checkURL" android:dialogTitle="@string/dialog_url"></EditTextPreference>
 </PreferenceScreen>
