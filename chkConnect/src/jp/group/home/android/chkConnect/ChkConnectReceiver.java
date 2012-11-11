@@ -64,8 +64,13 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 		WifiInfo info = wMgr.getConnectionInfo();
 		if ((info != null)&&(info.getSSID() != null)&&(info.getSupplicantState() == SupplicantState.COMPLETED)) {
 			// Wifi接続している場合、接続確認のthreadをキックする。イベント処理ルーチンで余計な時間をかけない。
+			SharedPreferences sp;
+			sp = context.getSharedPreferences(context.getString(R.string.app_name), Context.MODE_PRIVATE);
+			final long delay = sp.getLong("interval", 1L);
+			
 			// 次回起動を暫定セット。キックしたthreadがシステムにkillされたら、次回の起動がセットされないかもしれないから。
-			util.setNextLaunch(context.getApplicationContext(), DEFAULT_INTERVAL);
+			// 間隔が長い方をセットして、sleep中に次の起動が行われないようにする。
+			util.setNextLaunch(context.getApplicationContext(), Math.max(DEFAULT_INTERVAL, delay));
 			util.notify(context, R.drawable.icon, "");
 			// 確認Thread(親)
 			(new Thread(new Runnable() {
@@ -81,21 +86,18 @@ public class ChkConnectReceiver extends BroadcastReceiver{
 							util.logging(context, "Too short interval.");
 							return;
 						}
-						SharedPreferences sp;
-						sp = context.getSharedPreferences(context.getString(R.string.app_name), Context.MODE_PRIVATE);
-						final long delay = sp.getLong("interval", interval);
-	
-						final long t = delay*1000-200;
+
+						final long timeLimit = delay*1000-200;
 						Thread chkThread = new Thread(new Runnable() {
 							public void run() {
-								util.chkConnect(context, uri, delay, t);
+								util.chkConnect(context, uri, delay, timeLimit);
 							}
 						});
 						chkThread.start();
 						// waitする
 						try {
-							util.logging(context, "Start waiting " + String.valueOf(t/1000) + " sec.");
-							Thread.sleep(t);
+							util.logging(context, "Start waiting " + String.valueOf(timeLimit/1000) + " sec.");
+							Thread.sleep(timeLimit);
 							util.logging(context, "Finish waiting");
 						} catch (InterruptedException e) {
 							util.notify(context, R.drawable.nowifi, context.getString(R.string.ntfy_error));
